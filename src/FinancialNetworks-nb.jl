@@ -331,7 +331,7 @@ md"""
 # ╔═╡ eabcafbd-5c35-4ee9-a50c-d129f8d3a34a
 #=╠═╡
 begin
-	n_islands = 3
+	n_islands = 2
 	#ȳ = 0.25
 	n = IslandNetwork(n_islands, n_banks ÷ n_islands, ȳ; γ)
 	IM = InterbankMarket(n)
@@ -386,7 +386,7 @@ function visualize_bank_firm_network!(ax, IM, shares, out; r = 1.4, start = Maki
 		#figure = figure(220),
 		nlabels = [string.(1:n_banks); ["F$i" for i ∈ 1:n_firms]],
 		node_marker = [fill(:circle, n_banks); fill(:rect, n_firms)],
-		node_color = [ifelse.(out.y_pc .< 1.0, :red, :lightgray); fill(colorant"limegreen", n_firms)],
+		node_color = [ifelse.(out.y_pc .< 1.0, :red, ifelse.(out.ℓ .> 0.0, :orange, :lightgray)); fill(colorant"limegreen", n_firms)],
 		edge_attr,
 		arrow_attr,
 		extend_limits = 0.1,
@@ -397,10 +397,27 @@ function visualize_bank_firm_network!(ax, IM, shares, out; r = 1.4, start = Maki
 	nothing
 end
 
+# ╔═╡ af1b2d6d-0ac8-4bbf-b0da-adf65f27330e
+function add_legend!(figpos; kwargs...)
+	dict = [:lightgray => "solvent", :orange => "insolvent", :red => "bankrupt"]
+	
+	elements = [
+		MarkerElement(marker = :circle, strokewidth=1, markersize = 20, color = c) for c in first.(dict)
+	]
+
+	Legend(figpos, elements, last.(dict); kwargs...)
+
+	figpos
+end
+
 # ╔═╡ ba5c477d-ad8c-44f1-b815-529bd247274b
-function visualize_bank_firm_network(IM, shares, out; r = 1.4, start = Makie.automatic, figure = figure(220))
+function visualize_bank_firm_network(IM, shares, out; r = 1.4, start = Makie.automatic, figure = figure(320, 220), add_legend=false)
 	fig = Figure(; figure...)
 	visualize_bank_firm_network!(Axis(fig[1,1]), IM, shares, out; r, start)
+
+	if add_legend
+		add_legend!(fig[0,:], orientation=:horizontal, framevisible=false)
+	end
 	fig # |> as_svg
 end
 
@@ -420,7 +437,7 @@ let
 	end
 
 	firms = [Firm(; α, ζ, ζ_α, a) for _ ∈ 1:n_firms]
-	εs = zeros(n_banks)#; εs[1] = ε
+	εs = zeros(n_banks); εs[1] = ε
 	
 	banks = [Bank(; ν, c=c - (i==1)*ε, shares=shares[:,i]) for i ∈ 1:n_banks]
 
@@ -430,9 +447,16 @@ let
 
 	#@info out
 	
-	visualize_bank_firm_network(IMx, shares, out) |> as_svg
+	visualize_bank_firm_network(IMx, shares, out; add_legend=true) |> as_svg
 end
   ╠═╡ =#
+
+# ╔═╡ 8d9c009d-7434-4d8b-884f-2725639b2748
+let
+	fig = Figure()
+	add_legend!(fig[1,1], orientation = :horizontal, framevisible=false)
+	fig
+end
 
 # ╔═╡ a15f8d3c-2bb2-40d0-9439-701fbd8dd47c
 md"""
@@ -1855,6 +1879,8 @@ version = "3.5.0+0"
 # ╠═ba5c477d-ad8c-44f1-b815-529bd247274b
 # ╠═92c4efe9-6ba1-4895-a3c8-05ec312a3820
 # ╠═8028be99-7559-4974-91a6-36ccab2d4a7f
+# ╠═af1b2d6d-0ac8-4bbf-b0da-adf65f27330e
+# ╠═8d9c009d-7434-4d8b-884f-2725639b2748
 # ╟─a15f8d3c-2bb2-40d0-9439-701fbd8dd47c
 # ╠═57945142-4153-4c89-bef6-bb8bb0b6a7d8
 # ╠═5e26f5e4-0af9-4c2c-bba7-cfa53547e5e9
