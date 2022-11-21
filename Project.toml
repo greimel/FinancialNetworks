@@ -1,7 +1,7 @@
 name = "FinancialNetworks"
 uuid = "c73f5c1d-977f-41e1-b4fe-bd0ab588d05d"
 authors = ["Fabian Greimel <fabgrei@gmail.com>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 Chain = "8be319e6-bccf-4806-a6f7-6fae938471bc"
@@ -11,6 +11,7 @@ DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 NetworksUtils = "4943429a-ba68-4c19-ade3-7332adbb3997"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
