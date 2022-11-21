@@ -25,11 +25,8 @@ using Graphs
 # ╔═╡ c46f9af5-6bd5-49fe-8086-44b238d5a8a1
 using LinearAlgebra: I
 
-# ╔═╡ d5dc8002-0d8e-4681-a6a5-4d5fc49f9288
-# ╠═╡ skip_as_script = true
-#=╠═╡
-using CairoMakie
-  ╠═╡ =#
+# ╔═╡ fc4fa10d-2b39-4f10-bac8-7a1e5467669d
+using Makie
 
 # ╔═╡ fcb09a02-70ca-4da0-bab9-6f2d9da6a195
 using SimpleWeightedGraphs
@@ -344,13 +341,18 @@ begin
 end;
   ╠═╡ =#
 
+# ╔═╡ d5dc8002-0d8e-4681-a6a5-4d5fc49f9288
+# ╠═╡ skip_as_script = true
+#=╠═╡
+import CairoMakie
+  ╠═╡ =#
+
 # ╔═╡ cbcdef2e-d854-47c9-bfc4-595c90ea50fb
 md"""
 ### Visualize bank-firm-network
 """
 
 # ╔═╡ 8028be99-7559-4974-91a6-36ccab2d4a7f
-#=╠═╡
 function visualize_bank_firm_network!(ax, IM, shares, out; r = 1.4, start = Makie.automatic)
 
 	n = IM.network
@@ -391,21 +393,19 @@ function visualize_bank_firm_network!(ax, IM, shares, out; r = 1.4, start = Maki
 		edge_attr,
 		arrow_attr,
 		extend_limits = 0.1,
+		edge_plottype = :beziersegments
 		#axis = (; title = label(n))
 	)
 
 	nothing
 end
-  ╠═╡ =#
 
 # ╔═╡ ba5c477d-ad8c-44f1-b815-529bd247274b
-#=╠═╡
 function visualize_bank_firm_network(IM, shares, out; r = 1.4, start = Makie.automatic, figure = figure(220))
 	fig = Figure(; figure...)
 	visualize_bank_firm_network!(Axis(fig[1,1]), IM, shares, out; r, start)
 	fig # |> as_svg
 end
-  ╠═╡ =#
 
 # ╔═╡ 0a2dfc44-67f8-4e9f-991f-906509116d66
 #=╠═╡
@@ -457,6 +457,7 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 NetworksUtils = "4943429a-ba68-4c19-ade3-7332adbb3997"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
@@ -470,6 +471,7 @@ Colors = "~0.12.8"
 DataFrames = "~1.3.4"
 DocStringExtensions = "~0.9.1"
 Graphs = "~1.7.2"
+Makie = "~0.17.13"
 NetworksUtils = "~0.1.0"
 PlutoUI = "~0.7.40"
 Roots = "~2.0.2"
@@ -482,7 +484,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "cd6d00c7e106d09179c9972265a31e233b604f0d"
+project_hash = "8cd14005176dbace6590797ff7d21b7259e242b3"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -1313,9 +1315,9 @@ version = "0.5.11"
 
 [[deps.Pango_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "FriBidi_jll", "Glib_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "3a121dfbba67c94a5bec9dde613c3d0cbcf3a12b"
+git-tree-sha1 = "84a314e3926ba9ec66ac097e3635e270986b0f10"
 uuid = "36c8627f-9965-5494-a995-c6b170f724f3"
-version = "1.50.3+0"
+version = "1.50.9+0"
 
 [[deps.Parsers]]
 deps = ["Dates"]
@@ -1822,6 +1824,7 @@ version = "3.5.0+0"
 # ╠═0a2dfc44-67f8-4e9f-991f-906509116d66
 # ╠═eabcafbd-5c35-4ee9-a50c-d129f8d3a34a
 # ╠═d5dc8002-0d8e-4681-a6a5-4d5fc49f9288
+# ╠═fc4fa10d-2b39-4f10-bac8-7a1e5467669d
 # ╠═fcb09a02-70ca-4da0-bab9-6f2d9da6a195
 # ╠═3d037a99-7978-4fce-b603-535a90362f40
 # ╟─cbcdef2e-d854-47c9-bfc4-595c90ea50fb
