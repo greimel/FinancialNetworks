@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 7d711677-35dd-46d2-ba87-f2994d483dc3
-using NetworksUtils: FinancialNetwork, CompleteNetwork, figure, γNetwork, IslandNetwork, InterbankMarket, is_regular, label, numbered_graphplot, numbered_graphplot!, nested_circles
+using NetworksUtils: FinancialNetwork, CompleteNetwork, figure, γNetwork, IslandNetwork, InterbankMarket, is_regular, label, numbered_graphplot, numbered_graphplot!, nested_circles, componentwise_circle
 
 # ╔═╡ 952825f3-7f66-4435-a850-cbe160106f6f
 using DataFrames
@@ -350,7 +350,7 @@ md"""
 """
 
 # ╔═╡ 8028be99-7559-4974-91a6-36ccab2d4a7f
-function visualize_bank_firm_network!(ax, IM, shares, out; r = 1.4, start = Makie.automatic)
+function visualize_bank_firm_network!(ax, IM, shares, out; r = 1.4, start = Makie.automatic, layout=Makie.automatic, kwargs...)
 
 	n = IM.network
 	g₀ = SimpleWeightedDiGraph(n.Y)
@@ -381,8 +381,9 @@ function visualize_bank_firm_network!(ax, IM, shares, out; r = 1.4, start = Maki
 	edge_attr = (; edge_attr_df.linewidth, edge_attr_df.linestyle)
 
 	start = start === Makie.automatic ? 1/n_banks : start
+	layout = layout === Makie.automatic ? nested_circles(n_banks; start, r) : layout
 	numbered_graphplot!(ax, g;
-		layout = nested_circles(n_banks; start, r),
+		layout,
 		#figure = figure(220),
 		nlabels = [string.(1:n_banks); ["F$i" for i ∈ 1:n_firms]],
 		node_marker = [fill(:circle, n_banks); fill(:rect, n_firms)],
@@ -390,7 +391,8 @@ function visualize_bank_firm_network!(ax, IM, shares, out; r = 1.4, start = Maki
 		edge_attr,
 		arrow_attr,
 		extend_limits = 0.1,
-		edge_plottype = :beziersegments
+		edge_plottype = :beziersegments,
+		kwargs...
 		#axis = (; title = label(n))
 	)
 
@@ -411,9 +413,9 @@ function add_legend!(figpos; kwargs...)
 end
 
 # ╔═╡ ba5c477d-ad8c-44f1-b815-529bd247274b
-function visualize_bank_firm_network(IM, shares, out; r = 1.4, start = Makie.automatic, figure = figure(320, 220), add_legend=false)
+function visualize_bank_firm_network(IM, shares, out; figure = figure(320, 220), add_legend=false, kwargs...)
 	fig = Figure(; figure...)
-	visualize_bank_firm_network!(Axis(fig[1,1]), IM, shares, out; r, start)
+	visualize_bank_firm_network!(Axis(fig[1,1]), IM, shares, out; kwargs...)
 
 	if add_legend
 		add_legend!(fig[0,:], orientation=:horizontal, framevisible=false)
@@ -424,7 +426,10 @@ end
 # ╔═╡ 0a2dfc44-67f8-4e9f-991f-906509116d66
 #=╠═╡
 let
-	if false #true #AOTS
+	show_firms = true
+	common_lenders = true
+	
+	if !common_lenders #AOTS
 		n_firms = n_banks
 		shares = I(n_banks)
 	else
@@ -445,9 +450,14 @@ let
 	
 	(; out) = equilibrium(banks, IMx, firms, shares, εs)
 
-	#@info out
-	
-	visualize_bank_firm_network(IMx, shares, out; add_legend=true) |> as_svg
+	if show_firms
+		kws = (;)
+	else
+		kws = (; layout = componentwise_circle)
+		shares = fill(0.0, (0, size(shares, 2)))
+	end
+
+	visualize_bank_firm_network(IMx, shares, out; add_legend=true, kws...) |> as_svg
 end
   ╠═╡ =#
 
@@ -1867,7 +1877,7 @@ version = "3.5.0+0"
 # ╠═d5ac4a10-48f0-4e59-a186-eff9dd059717
 # ╠═162e1da7-0d14-464f-8f64-66804009bc5d
 # ╠═c46f9af5-6bd5-49fe-8086-44b238d5a8a1
-# ╠═afa36073-424e-4ff8-b584-554ae66cee06
+# ╟─afa36073-424e-4ff8-b584-554ae66cee06
 # ╟─51f5c242-54af-4511-9838-58326756197d
 # ╠═0a2dfc44-67f8-4e9f-991f-906509116d66
 # ╠═eabcafbd-5c35-4ee9-a50c-d129f8d3a34a
