@@ -44,10 +44,7 @@ using Colors
 using StructArrays
 
 # ╔═╡ fde5439e-d1ed-43e7-be89-d8f41eff3817
-# ╠═╡ skip_as_script = true
-#=╠═╡
 using AlgebraOfGraphics
-  ╠═╡ =#
 
 # ╔═╡ 1b470abb-bf1e-4ec6-a5c8-5f05e86c87dc
 using DataFrameMacros
@@ -404,6 +401,11 @@ end
 RES.firm_df
   ╠═╡ =#
 
+# ╔═╡ 49b4eef5-4544-452b-b09c-4a36c5e99b12
+md"""
+# Visualizations
+"""
+
 # ╔═╡ d5dc8002-0d8e-4681-a6a5-4d5fc49f9288
 # ╠═╡ skip_as_script = true
 #=╠═╡
@@ -421,7 +423,7 @@ mix_with_white(colorant"limegreen", 0.5)
 
 # ╔═╡ cbcdef2e-d854-47c9-bfc4-595c90ea50fb
 md"""
-### Visualize bank-firm-network
+## Visualize bank-firm-network
 """
 
 # ╔═╡ 8028be99-7559-4974-91a6-36ccab2d4a7f
@@ -524,7 +526,7 @@ end
 
 # ╔═╡ ed67cfcb-b83d-4b8b-b698-00e91056523a
 md"""
-# Visualize bank balance sheet
+## Visualize bank balance sheet
 """
 
 # ╔═╡ 2a5f0419-3cf5-483a-921d-f53a49e3c096
@@ -563,12 +565,12 @@ function _balance_sheet_df_((; c, x, div, ill, rec, ν_paid, y_paid, shortfall))
 end
 
 # ╔═╡ 82ecd66b-d854-455e-b57e-42a318cd66cd
-#=╠═╡
 function balance_sheet_df_new(bank, firm, (; x, y); ωᵢ=1.0, ε=0.0, ℓ̄₋ᵢ=0.0)
 
 	(; y_pc, ν_pc, ℓ, rec_field, rec_machines, div) = 
 		_repay_(bank, (; x̄=x, ȳ=y), firm, (; ωᵢ, ε, ℓ̄₋ᵢ))
 
+	(; ν, c) = bank
 	y_paid = y_pc * y
 	ν_paid = ν_pc * ν
 	shortfall = (1-ν_pc) * ν + (1-y_pc) * y
@@ -580,11 +582,10 @@ function balance_sheet_df_new(bank, firm, (; x, y); ωᵢ=1.0, ε=0.0, ℓ̄₋�
 
 	(; df, ℓ, shortfall)
 end
-  ╠═╡ =#
 
 # ╔═╡ 05688f6e-afa8-407b-867b-884a753c4ea9
 #=╠═╡
-function visualize_simple_balance_sheet((; c, ν), firm, (; x, y))
+function _visualize_simple_balance_sheet_((; c, ν), firm, (; x, y))
 
 	(; df, ℓ, shortfall) = balance_sheet_df_new((; c, ν), firm, (; x, y))
 
@@ -598,15 +599,27 @@ function visualize_simple_balance_sheet((; c, ν), firm, (; x, y))
 	
 	plt = data(df) * mapping(
 		:side => sorter("receivable", "payable") => "", 
-		:val,
+		:val => "",
 		stack=:color, color=:color => "",
 		bar_labels=:lab => verbatim
 	) * visual(BarPlot, flip_labels_at = 0)
+end
+  ╠═╡ =#
+
+# ╔═╡ 4ef94a94-e170-4591-81fc-33f50a605367
+#=╠═╡
+function visualize_simple_balance_sheet(args...; figure=(;), legend=(;), kwargs...)
+	plt = _visualize_simple_balance_sheet_(args...; kwargs...)
+
+	if isempty(legend)
+		legend = (; position = :top, titleposition=:left, framevisible=false)
+	end
 	
 	draw(
-		plt, 
+		plt;
+		figure,
 		palettes = (; color=balance_sheet_palette()),
-		legend = (; position = :top, titleposition=:left, framevisible=false),
+		legend,
 	)
 end
   ╠═╡ =#
@@ -614,17 +627,35 @@ end
 # ╔═╡ 6e9977c1-b74e-4092-a858-1c1516bd3fe5
 #=╠═╡
 let
-	c = max(0.7 - ε_cash, 0.0)
-	ν = 1.2
+	ε_cash = 0.1
+	c = max(1.0 - ε_cash, 0.0)
+	ν = 1.0
 	x = 1.0
-	a = 0.1
+	a = 0.3
 	y = 1.0
 	A = 1.0
 	ζ = recovery_rate
 
+	figure = (; font="CMU", resolution = (400, 350))
+
 	firm = (; a, A, ζ, α=0.0, ζ_α = 1.0)
-	visualize_simple_balance_sheet((; c, ν), firm, (; x, y))
+	visualize_simple_balance_sheet((; c, ν), firm, (; x, y); figure) |> as_svg
 	
+end
+  ╠═╡ =#
+
+# ╔═╡ 21985363-5538-41b5-b2df-5cc3131040c3
+#=╠═╡
+function visualize_simple_balance_sheet!(figpos, legpos, args...; legend=(;), kwargs...)
+	plt = _visualize_simple_balance_sheet_(args...; kwargs...)
+
+	fg = draw!(
+		figpos,
+		plt,
+		palettes = (; color=balance_sheet_palette())
+	)
+	
+	legend!(legpos, fg; legend...)
 end
   ╠═╡ =#
 
@@ -700,7 +731,6 @@ function balance_sheet_df((; ν, c), (; a, A, ζ), (; ℓᵢ, ωᵢ, y_pc, ν_pc
 end
 
 # ╔═╡ 5e65f0a8-93c9-4698-8cf3-30df9992334a
-#=╠═╡
 function visualize_balance_sheets!(figpos, bank_df, banks, firms, shares)
 
 	function firm(i)
@@ -746,7 +776,6 @@ function visualize_balance_sheets!(figpos, bank_df, banks, firms, shares)
 
 	nothing
 end
-  ╠═╡ =#
 
 # ╔═╡ 7e46af06-58f4-44d3-98c0-f9b41f4d8d84
 #=╠═╡
@@ -2237,6 +2266,7 @@ version = "3.5.0+0"
 # ╠═1d00ca98-985a-489c-9ef4-d74f558d9b71
 # ╠═517b4257-4097-4ab4-8ddb-34e877f6ad15
 # ╠═eabcafbd-5c35-4ee9-a50c-d129f8d3a34a
+# ╟─49b4eef5-4544-452b-b09c-4a36c5e99b12
 # ╠═d5dc8002-0d8e-4681-a6a5-4d5fc49f9288
 # ╠═fc4fa10d-2b39-4f10-bac8-7a1e5467669d
 # ╠═fcb09a02-70ca-4da0-bab9-6f2d9da6a195
@@ -2251,6 +2281,8 @@ version = "3.5.0+0"
 # ╠═8d9c009d-7434-4d8b-884f-2725639b2748
 # ╟─ed67cfcb-b83d-4b8b-b698-00e91056523a
 # ╠═6e9977c1-b74e-4092-a858-1c1516bd3fe5
+# ╠═4ef94a94-e170-4591-81fc-33f50a605367
+# ╠═21985363-5538-41b5-b2df-5cc3131040c3
 # ╠═05688f6e-afa8-407b-867b-884a753c4ea9
 # ╠═2a5f0419-3cf5-483a-921d-f53a49e3c096
 # ╟─0f81552e-c4cf-495e-b1c7-782fe2d7b204
