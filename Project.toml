@@ -1,11 +1,12 @@
 name = "FinancialNetworks"
 uuid = "c73f5c1d-977f-41e1-b4fe-bd0ab588d05d"
 authors = ["Fabian Greimel <fabgrei@gmail.com>"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 Chain = "8be319e6-bccf-4806-a6f7-6fae938471bc"
 Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
+DataFrameMacros = "75880514-38bc-4a95-a458-c2aea5a3a702"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
@@ -17,3 +18,4 @@ NetworksUtils = "4943429a-ba68-4c19-ade3-7332adbb3997"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 SimpleWeightedGraphs = "47aef6b3-ad0c-573a-a1e2-d07658019622"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"

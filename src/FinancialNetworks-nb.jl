@@ -34,14 +34,11 @@ using SimpleWeightedGraphs
 # ╔═╡ 3d037a99-7978-4fce-b603-535a90362f40
 # ╠═╡ skip_as_script = true
 #=╠═╡
-using PlutoUI: PlutoUI, as_svg, Slider, TableOfContents
+using PlutoUI: PlutoUI, as_svg, Slider, TableOfContents, CheckBox
   ╠═╡ =#
 
 # ╔═╡ 92c4efe9-6ba1-4895-a3c8-05ec312a3820
 using Colors
-
-# ╔═╡ d004095e-2910-4a7c-8ee4-b5d13c34419e
-using PlutoUI: CheckBox
 
 # ╔═╡ 7e12dd72-2d66-4d94-8af6-084e80a63885
 using StructArrays
@@ -2253,7 +2250,6 @@ version = "3.5.0+0"
 # ╠═af1b2d6d-0ac8-4bbf-b0da-adf65f27330e
 # ╠═8d9c009d-7434-4d8b-884f-2725639b2748
 # ╟─ed67cfcb-b83d-4b8b-b698-00e91056523a
-# ╠═d004095e-2910-4a7c-8ee4-b5d13c34419e
 # ╠═6e9977c1-b74e-4092-a858-1c1516bd3fe5
 # ╠═05688f6e-afa8-407b-867b-884a753c4ea9
 # ╠═2a5f0419-3cf5-483a-921d-f53a49e3c096
