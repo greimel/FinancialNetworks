@@ -10,9 +10,6 @@ using NetworksUtils: FinancialNetwork, CompleteNetwork, figure, γNetwork, Islan
 # ╔═╡ 952825f3-7f66-4435-a850-cbe160106f6f
 using DataFrames
 
-# ╔═╡ c59a6cc9-f9bd-4831-9bd8-7bc331d5790f
-using Chain: @chain
-
 # ╔═╡ 63ed5af7-2c4d-4184-8559-ec6977f04709
 using Roots
 
@@ -37,20 +34,29 @@ using PlutoUI: PlutoUI, as_svg, Slider, TableOfContents, CheckBox
 # ╔═╡ 92c4efe9-6ba1-4895-a3c8-05ec312a3820
 using Colors
 
+# ╔═╡ 57945142-4153-4c89-bef6-bb8bb0b6a7d8
+using DocStringExtensions
+
+# ╔═╡ 2a8b0a1b-7bbb-4495-a930-773d8205da4e
+using CategoricalArrays
+
+# ╔═╡ 1b470abb-bf1e-4ec6-a5c8-5f05e86c87dc
+using DataFrameMacros
+
 # ╔═╡ 7e12dd72-2d66-4d94-8af6-084e80a63885
 using StructArrays
 
 # ╔═╡ fde5439e-d1ed-43e7-be89-d8f41eff3817
 using AlgebraOfGraphics
 
-# ╔═╡ 1b470abb-bf1e-4ec6-a5c8-5f05e86c87dc
-using DataFrameMacros
+# ╔═╡ c59a6cc9-f9bd-4831-9bd8-7bc331d5790f
+using Chain: @chain
 
-# ╔═╡ 57945142-4153-4c89-bef6-bb8bb0b6a7d8
-using DocStringExtensions
+# ╔═╡ aaa05ff2-88a8-43ce-be56-e2c3d10a6bb8
+using GeometryBasics: Rect, Vec2f0
 
 # ╔═╡ 4bcf6d95-0fd1-4d60-9600-54ee8015e21f
-using Makie: @key_str
+using Makie: @key_str, @lift
 
 # ╔═╡ ec9e91ef-fff8-4d7f-8df3-86df19ced7ed
 md"""
@@ -314,8 +320,6 @@ function equilibrium(banks, IM₀, firms, shares, εs; maxit = 100)
 			
 			firm_df = DataFrame(; ℓ̄, δ_pc)
 			
-			# interbank_df = DataFrame(; x, y)
-
 			return (; bank_df, firm_df, it, success = it != maxit, banks, IM)
 		end
 	end
@@ -343,14 +347,26 @@ md"""
 # Visualizations
 """
 
+# ╔═╡ 8873a586-b7b1-474b-8670-95007ebb1ceb
+md"""
+## Demo 1: Individual balance sheet
+"""
+
+# ╔═╡ 1d73462f-7016-466c-97af-cb2cd2f8785f
+md"""
+## Demo 2: Contagion
+"""
+
+# ╔═╡ deaf2d86-d3ba-4b7c-9700-062c6b8c3a2c
+md"""
+## Packages and helpers
+"""
+
 # ╔═╡ d5dc8002-0d8e-4681-a6a5-4d5fc49f9288
 # ╠═╡ skip_as_script = true
 #=╠═╡
 import CairoMakie
   ╠═╡ =#
-
-# ╔═╡ fc4fa10d-2b39-4f10-bac8-7a1e5467669d
-#using Makie
 
 # ╔═╡ 72de5ce2-6bab-4f9a-b45a-4559fa3affea
 function mix_with_white(color, α)
@@ -366,9 +382,6 @@ md"""
 ## Visualize bank-firm-network
 """
 
-# ╔═╡ ac36c36f-1ecc-4e3c-b421-1e414dba0fdd
-
-
 # ╔═╡ ed67cfcb-b83d-4b8b-b698-00e91056523a
 md"""
 ## Visualize bank balance sheet
@@ -383,6 +396,24 @@ md"""
 #=╠═╡
 TableOfContents()
   ╠═╡ =#
+
+# ╔═╡ b14aac81-cb88-47af-809e-751fb6cf8ee6
+md"""
+## Line patterns in AlgebraOfGraphics
+"""
+
+# ╔═╡ bf719a9e-9b10-4584-82e9-af7ec4f84325
+hatch_dict = Dict(
+	:/ => Vec2f0(1),
+	:\ => Vec2f0(1, -1),
+	:- => Vec2f0(1, 0),
+	:| => Vec2f0(0, 1),
+	:x => [Vec2f0(1), Vec2f0(1, -1)],
+	:+ => [Vec2f0(1, 0), Vec2f0(0, 1)]
+)
+
+# ╔═╡ a54b52cf-bed9-4b42-a478-a7210fbb19fb
+hatches = [:\, :/, :-, :|, :x, :+]
 
 # ╔═╡ 1c225b52-55d9-44f9-947c-b16ce9bf481f
 md"""
@@ -486,15 +517,20 @@ function Makie.plot!(p::BarPlot)
                 p.dodge_gap, p.stack, p.direction, p.bar_labels, p.flip_labels_at,
                 p.label_color, p.color_over_background, p.color_over_bar, p.label_formatter, p.label_offset)
 
-    poly!(
-        p, bars, color = p.color, colormap = p.colormap, colorrange = p.colorrange,
-        strokewidth = p.strokewidth, strokecolor = p.strokecolor, visible = p.visible,
-        inspectable = p.inspectable, transparency = p.transparency,
-        highclip = p.highclip, lowclip = p.lowclip, nan_color = p.nan_color,
-    )
+	kwargs_df = DataFrame(; 
+		color=p.color[], colormap = p.colormap[], colorrange = p.colorrange[],
+        strokewidth = p.strokewidth[], strokecolor = p.strokecolor[],
+		visible = p.visible[],
+        inspectable = p.inspectable[], transparency = p.transparency[],
+        highclip = p.highclip[], lowclip = p.lowclip[], nan_color = p.nan_color[]
+	)
+	map(zip(bars[], eachrow(kwargs_df))) do (bar, kwargs)
+		poly!(p, bar; kwargs...)
+	end
+
     if !isnothing(p.bar_labels[])
 		#@info p.label_size[]
-        text!(p, labels; align=label_aligns, offset=label_offsets, color=label_colors, font=p.label_font, textsize=p.label_size,
+        text!(p, labels; align=label_aligns, offset=label_offsets, color=label_colors, font=p.label_font, fontsize=p.label_size,
 		rotation=p.label_rotation)
     end
 end
@@ -585,17 +621,26 @@ end
 
 end
 
+# ╔═╡ 0f81552e-c4cf-495e-b1c7-782fe2d7b204
+#=╠═╡
+md"""
+* size of shock $(@bind ε_cash Slider(0.0:0.05:1.0, show_value = true, default = 0.0))
+* show illiquid firm value ``A`` $(@bind show_illiquid CheckBox(default = false))
+* recovery rate ``ζ`` $(@bind recovery_rate Slider(0:0.1:1.0, show_value = true, default = 0.0))
+""" # |> aside
+  ╠═╡ =#
+
 # ╔═╡ 51f5c242-54af-4511-9838-58326756197d
 #=╠═╡
 md"""
-* ``a``: $(@bind a Slider(0:0.01:1.0, default = 0.6, show_value = true))
+* ``a``: $(@bind a Slider(0:0.01:1.0, default = 0.7, show_value = true))
 * ``ε``: $(@bind ε Slider(0:0.01:2.0, default = 0.0, show_value = true))
-* ``γ``: $(@bind γ Slider(0:0.05:1.0, default = 0.5, show_value = true))
+* ``γ``: $(@bind γ Slider(0:0.05:1.0, default = 1.0, show_value = true))
 * ``α``: $(@bind α Slider(0:0.05:0.99, default = 0.5, show_value = true))
 * ``ζ``: $(@bind ζ Slider(0:0.005:1.0, default = 0.0, show_value = true))
-* ``ζ_α``: $(@bind ζ_α Slider(0:0.01:1.0, default = 1.0, show_value = true))
+* ``ζ_α``: $(@bind ζ_α Slider(0:0.1:1.0, default = 0.8, show_value = true))
 * ``\bar y``:  $(@bind ȳ Slider(0:0.005:0.99, default = 0.25, show_value = true))
-* ``c``:  $(@bind c Slider(0:0.005:0.99, default = 0.25, show_value = true))
+* ``c``:  $(@bind c Slider(0:0.005:0.99, default = 0.2, show_value = true))
 * ``ν``:  $(@bind ν Slider(0:0.005:0.99, default = 0.50, show_value = true))
 
 """
@@ -739,31 +784,18 @@ let
 end
   ╠═╡ =#
 
-# ╔═╡ 8d9c009d-7434-4d8b-884f-2725639b2748
-let
-	fig = Figure()
-	add_legend!(fig[1,1], orientation = :horizontal, framevisible=false)
-	fig
-end
+# ╔═╡ ab94d435-1bf2-4344-8aee-7a8ed99c1c7a
+fonts = (; regular = Makie.MathTeXEngine.texfont(), bold = Makie.MathTeXEngine.texfont())
 
 # ╔═╡ 2a5f0419-3cf5-483a-921d-f53a49e3c096
 function balance_sheet_palette()
-	color_df = DataFrame(
-		color = ["external", "interbank", "firm", "liquidated", "shortfall"],
-		i_color = [1, 2, 4, 3, 5]
+	palette_df = DataFrame(
+		label = ["external", "interbank", "firm", "liquidated", "shortfall"],
+		color = [Makie.wong_colors()[[5, 2, 4, 3, ]]..., Pattern("/")]
 	)
-	@transform!(color_df, :wong = Makie.wong_colors()[:i_color])
-	color = color_df.color .=> color_df.wong
+	
+	palette_df.label .=> palette_df.color
 end
-
-# ╔═╡ 0f81552e-c4cf-495e-b1c7-782fe2d7b204
-#=╠═╡
-md"""
-* size of shock $(@bind ε_cash Slider(0.0:0.05:1.0, show_value = true, default = 0.0))
-* show illiquid firm value ``A`` $(@bind show_illiquid CheckBox(default = false))
-* recovery rate ``ζ`` $(@bind recovery_rate Slider(0:0.1:0.5, show_value = true, default = 0.0))
-""" # |> aside
-  ╠═╡ =#
 
 # ╔═╡ 789efa32-9af5-4325-ae94-4bae9e9ecbfc
 function _balance_sheet_df_((; c, x, div, ill, rec, ν_paid, y_paid, shortfall))
@@ -773,9 +805,9 @@ function _balance_sheet_df_((; c, x, div, ill, rec, ν_paid, y_paid, shortfall))
 		(color = "firm",   side = "receivable", ill=false, val=div, lab=L"dividend $δ$"),
 		
 		(color = "firm",   side = "receivable", ill=true,  val=ill, lab="illiquid"),
-		(color = "liquidated", side = "receivable", ill=false, val=rec, lab=""),
+		(color = "liquidated", side = "receivable", ill=false, val=rec, lab=L"recovered $ρ$"),
 		
-		(color = "external",  side = "payable",    ill=false, val=ν_paid, lab="deposits ν"),
+		(color = "external",  side = "payable",    ill=false, val=ν_paid, lab=L"deposits $ν$"),
 		(color = "interbank", side = "payable",    ill=false, val=y_paid, lab=L"IB debt $y$"),
 		(color = "shortfall", side = "payable",    ill=false,  val=shortfall, lab=""),
 	])
@@ -783,28 +815,37 @@ end
 
 # ╔═╡ 82ecd66b-d854-455e-b57e-42a318cd66cd
 function balance_sheet_df_new(bank, firm, (; x, y); ωᵢ=1.0, ε=0.0, ℓ̄₋ᵢ=0.0)
+	c₀ = bank.c
+	ε_cash = get(bank, :ε, 0.0)
 
+	c = max(c₀ - ε_cash, 0.0)
+	bank = (; c, bank.ν)
+	
 	(; y_pc, ν_pc, ℓ, rec_field, rec_machines, div) = 
 		_repay_(bank, (; x̄=x, ȳ=y), firm, (; ωᵢ, ε, ℓ̄₋ᵢ))
 
+	(; a, A) = firm
 	(; ν, c) = bank
 	y_paid = y_pc * y
 	ν_paid = ν_pc * ν
 	shortfall = (1-ν_pc) * ν + (1-y_pc) * y
 	rec =  ωᵢ * (rec_field + rec_machines)
-	ill = (1-ℓ) * ωᵢ * firm.A
+	ill = (1-ℓ) * ωᵢ * A
 	div = ωᵢ * div
+
 	
 	df = _balance_sheet_df_((; c, x, div, ill, rec, ν_paid, y_paid, shortfall))
 
-	(; df, ℓ, shortfall)
+	bs_max = max(ωᵢ * (A + a) + x + c₀, y + ν)
+	
+	(; df, bs_max, ℓ, shortfall)
 end
 
 # ╔═╡ 05688f6e-afa8-407b-867b-884a753c4ea9
 #=╠═╡
-function _visualize_simple_balance_sheet_((; c, ν), firm, (; x, y))
+function _visualize_simple_balance_sheet_(bank, firm, (; x, y))
 
-	(; df, ℓ, shortfall) = balance_sheet_df_new((; c, ν), firm, (; x, y))
+	(; df, bs_max, ℓ, shortfall) = balance_sheet_df_new(bank, firm, (; x, y))
 
 	if !show_illiquid || ℓ ≈ 1
 		@subset!(df, :lab ≠ "illiquid")
@@ -813,20 +854,31 @@ function _visualize_simple_balance_sheet_((; c, ν), firm, (; x, y))
 		@subset!(df, :color ≠ "liquidated")
 	end
 	@subset!(df, :val > 0)
+	@transform!(df, @subset(:val < 0.3), :lab = "")
+
+	df.color = categorical(df.color)
+	
+	ordered = @chain begin
+		["external", "interbank", "firm", "liquidated", "shortfall"]
+		filter(∈(unique(df.color)), _)
+	end
+	levels!(df.color, ordered)
 	
 	plt = data(df) * mapping(
 		:side => sorter("receivable", "payable") => "", 
 		:val => "",
 		stack=:color, color=:color => "",
 		bar_labels=:lab => verbatim
-	) * visual(BarPlot, flip_labels_at = 0, label_size=15)
+	) * visual(BarPlot, flip_labels_at = 0, label_size=15, strokewidth=0.5)
+
+	(; plt, bs_max)
 end
   ╠═╡ =#
 
 # ╔═╡ 4ef94a94-e170-4591-81fc-33f50a605367
 #=╠═╡
 function visualize_simple_balance_sheet(args...; figure=(;), legend=(;), kwargs...)
-	plt = _visualize_simple_balance_sheet_(args...; kwargs...)
+	(; plt, bs_max) = _visualize_simple_balance_sheet_(args...; kwargs...)
 
 	if isempty(legend)
 		legend = (; position = :top, titleposition=:left, framevisible=false)
@@ -834,6 +886,7 @@ function visualize_simple_balance_sheet(args...; figure=(;), legend=(;), kwargs.
 	
 	draw(
 		plt;
+		axis = (limits = (nothing, nothing, 0, 1.05 * bs_max),),
 		figure,
 		palettes = (; color=balance_sheet_palette()),
 		legend,
@@ -844,19 +897,18 @@ end
 # ╔═╡ 6e9977c1-b74e-4092-a858-1c1516bd3fe5
 #=╠═╡
 let
-	ε_cash = 0.1
-	c = max(1.0 - ε_cash, 0.0)
-	ν = 1.0
+	c = 0.7
+	ν = 1.2
 	x = 1.0
-	a = 0.3
+	a = 0.5
 	y = 1.0
 	A = 1.0
 	ζ = recovery_rate
-
-	figure = (; font="CMU", resolution = (400, 350))
+	
+	figure = (; fonts, resolution = (400, 350), fontsize=15)
 
 	firm = (; a, A, ζ, α=0.0, ζ_α = 1.0)
-	visualize_simple_balance_sheet((; c, ν), firm, (; x, y); figure) |> as_svg
+	visualize_simple_balance_sheet((; c, ν, ε=ε_cash), firm, (; x, y); figure) |> as_svg
 	
 end
   ╠═╡ =#
@@ -864,7 +916,7 @@ end
 # ╔═╡ 21985363-5538-41b5-b2df-5cc3131040c3
 #=╠═╡
 function visualize_simple_balance_sheet!(figpos, legpos, args...; legend=(;), kwargs...)
-	plt = _visualize_simple_balance_sheet_(args...; kwargs...)
+	(; plt, bs_max) = _visualize_simple_balance_sheet_(args...; kwargs...)
 
 	fg = draw!(
 		figpos,
@@ -873,59 +925,6 @@ function visualize_simple_balance_sheet!(figpos, legpos, args...; legend=(;), kw
 	)
 	
 	legend!(legpos, fg; legend...)
-end
-  ╠═╡ =#
-
-# ╔═╡ 1a7cbefb-2e2b-4cc5-81e7-caccc970e29a
-#=╠═╡
-let
-	c = 0.7
-	ν = 1.2
-	x = 1.0
-	a = 0.5
-	y = 1.0
-	A = 1.0
-	ζ = recovery_rate
-
-	c = max(c - ε_cash, zero(c))
-
-	firm = (; a, A, ζ, α = 0.0, ζ_α = 1.0)
-
-	(; df, ℓ) = balance_sheet_df_new((; c, ν), firm, (; x, y))
-	
-	if !show_illiquid || (1-ℓ) * A ≈ 0
-		@subset!(df, :lab ≠ "illiquid")
-	end
-	if ℓ * ζ ≈ 0
-		@subset!(df, :color ≠ "liquidated")
-	end
-	@subset!(df, :val > 0)
-	
-	fig = Figure(; font="CMU", resolution=(350, 300))
-	ax = Axis(fig[2,1], xticks = (1:2, ["receivables", "payables"]), limits = (nothing, nothing, 0, 3.5))
-
-	color_df = DataFrame(
-		color = ["external", "interbank", "firm", "liquidated", "shortfall"],
-		i_color = [1, 2, 4, 3, 5]
-	)
-	
-	@chain df begin
-		leftjoin(_, color_df, on=:color)
-		disallowmissing!
-		@transform!(:i_side = :side == "receivable" ? 1 : 2)
-		@transform!(:fill = (Makie.wong_colors()[:i_color], 0.5 + 0.5 * (:ill == false)))
-		barplot!(ax, _.i_side, _.val, stack = _.i_color, color = _.fill, bar_labels = _.lab, flip_labels_at = 0, label_size = 15
-		)
-	end
-
-	df = @chain color_df begin
-		@subset(:color ∈ ["external", "interbank", "firm"])
-		@transform!(:legend = PolyElement(color = Makie.wong_colors()[:i_color]))
-	end
-
-	Legend(fig[1,1], df.legend, df.color, orientation = :horizontal)
-
-	fig |> as_svg
 end
   ╠═╡ =#
 
@@ -942,8 +941,10 @@ function balance_sheet_df((; ν, c), (; a, A, ζ), (; ℓᵢ, ωᵢ, y_pc, ν_pc
 	div = ωᵢ * div
 	
 	df = _balance_sheet_df_((; c, x, div, ill, rec, ν_paid, y_paid, shortfall))
+
+	@subset!(df, :lab ≠ "illiquid")
 	
-	bs_max = max(ωᵢ * (A + a) + x̄ + c, ȳ + ν) * 1.05
+	bs_max = max(ωᵢ * a + x̄ + c, ȳ + ν) * 1.05
 	(; df, bs_max)
 end
 
@@ -985,11 +986,11 @@ function visualize_balance_sheets!(figpos, bank_df, banks, firms, shares)
 		) * visual(BarPlot)
 	end
 
-	fg = draw!(figpos[1,1], plt, 
+	fg = draw!(figpos[2,1], plt, 
 		axis = (limits = (nothing, nothing, 0, 1.05 * bs_max),),
 		palettes=(color=balance_sheet_palette(),)
 	)
-	legend!(figpos[1,2], fg)
+	legend!(figpos[1,1], fg, orientation=:horizontal, titleposition=:left, framevisible=false)
 
 	nothing
 end
@@ -999,15 +1000,20 @@ end
 let
 	(; IM, shares, firms, banks, bank_df, firm_df) = RES
 
-	fig = Figure(resolution = (800, 300))
+	fig = Figure(; resolution = (800, 300), fonts)
 		
-	visualize_bank_firm_network!(Axis(fig[1,1]), IM, shares, bank_df, firm_df; start = 1/n_banks)
+	visualize_bank_firm_network!(Axis(fig[1,1][2,1]), IM, shares, bank_df, firm_df; start = 1/n_banks)
 
-	visualize_balance_sheets!(fig[1,2:4], bank_df, banks, firms, shares)
+	add_legend!(fig[1,1][1,1], orientation=:horizontal, framevisible=false, nbanks=2)
+
+	visualize_balance_sheets!(fig[1,2:3], bank_df, banks, firms, shares)
 
 	fig |> as_svg
 end
   ╠═╡ =#
+
+# ╔═╡ 2a2ba7c6-5063-4347-bddc-2069515fb04a
+line_pattern(hatch; width=1.5, tilesize=(10,10), linecolor=:black, color=:white) = Makie.LinePattern(; direction=hatch_dict[Symbol(hatch)], width, tilesize, linecolor, background_color=color)
 
 # ╔═╡ b4ac5a2e-ed01-4bed-9183-dec5fe614990
 let
@@ -1020,7 +1026,7 @@ let
 	barplot(fig[2,1], [1, 2], [0.5, 0.2], bar_labels = [lab2, lab2], flip_labels_at = 0.3, direction=:x)
 	barplot(fig[2,2], [1, 2], [0.5, 0.2], bar_labels = [lab2, lab2], flip_labels_at = 0.3)
 
-	text(fig[1,3], [1, 2], [1, 2]; text = [lab2, "a"], align = [(0, 0), (0.5, 0.5)], textsize = 25)
+	text(fig[1,3], [1, 2], [1, 2]; text = [lab2, "a"], align = [(0, 0), (0.5, 0.5)], fontsize = 25)
 	fig
 	#save("/tmp/fig.png", fig); run(`open /tmp/fig.png`)
 end
@@ -1030,11 +1036,13 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 Chain = "8be319e6-bccf-4806-a6f7-6fae938471bc"
 Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DataFrameMacros = "75880514-38bc-4a95-a458-c2aea5a3a702"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
+GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
@@ -1046,20 +1054,22 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 
 [compat]
-AlgebraOfGraphics = "~0.6.12"
-CairoMakie = "~0.9.3"
+AlgebraOfGraphics = "~0.6.13"
+CairoMakie = "~0.10.0"
+CategoricalArrays = "~0.10.7"
 Chain = "~0.5.0"
-Colors = "~0.12.8"
+Colors = "~0.12.9"
 DataFrameMacros = "~0.4.0"
-DataFrames = "~1.4.3"
-DocStringExtensions = "~0.9.2"
+DataFrames = "~1.4.4"
+DocStringExtensions = "~0.9.3"
+GeometryBasics = "~0.4.5"
 Graphs = "~1.7.4"
-Makie = "~0.18.3"
-NetworksUtils = "~0.1.2"
-PlutoUI = "~0.7.48"
+Makie = "~0.19.0"
+NetworksUtils = "~0.1.4"
+PlutoUI = "~0.7.49"
 Roots = "~2.0.8"
 SimpleWeightedGraphs = "~1.2.1"
-StructArrays = "~0.6.13"
+StructArrays = "~0.6.14"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -1068,7 +1078,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.3"
 manifest_format = "2.0"
-project_hash = "d677988e84a9aa754c3f9a22c8986268d4aea6a5"
+project_hash = "9a7e36efe1011e30aab7627efbeb9798b58dce9a"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -1095,9 +1105,9 @@ version = "3.4.0"
 
 [[deps.AlgebraOfGraphics]]
 deps = ["Colors", "Dates", "Dictionaries", "FileIO", "GLM", "GeoInterface", "GeometryBasics", "GridLayoutBase", "KernelDensity", "Loess", "Makie", "PlotUtils", "PooledArrays", "RelocatableFolders", "StatsBase", "StructArrays", "Tables"]
-git-tree-sha1 = "f4d6d0f2fbc6b2c4a8eb9c4d47d14b9bf9c43d23"
+git-tree-sha1 = "3faa74d8af5a9bdcf79236c2984db71ba9e81e74"
 uuid = "cbdf2221-f076-402e-a563-3d30da359d67"
-version = "0.6.12"
+version = "0.6.13"
 
 [[deps.Animations]]
 deps = ["Colors"]
@@ -1130,6 +1140,12 @@ git-tree-sha1 = "66771c8d21c8ff5e3a93379480a2307ac36863f7"
 uuid = "13072b0f-2c55-5437-9ae7-d433b7a33950"
 version = "1.0.1"
 
+[[deps.AxisArrays]]
+deps = ["Dates", "IntervalSets", "IterTools", "RangeArrays"]
+git-tree-sha1 = "1dd4d9f5beebac0c03446918741b1a03dc5e5788"
+uuid = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
+version = "0.4.6"
+
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
@@ -1152,9 +1168,9 @@ version = "1.0.5"
 
 [[deps.CairoMakie]]
 deps = ["Base64", "Cairo", "Colors", "FFTW", "FileIO", "FreeType", "GeometryBasics", "LinearAlgebra", "Makie", "SHA", "SnoopPrecompile"]
-git-tree-sha1 = "20bd6ace08bb83bf5579e8dfb0b1e23e33518b04"
+git-tree-sha1 = "a1889ac0cfd046d62404ac3e0a1cb718575ee017"
 uuid = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-version = "0.9.3"
+version = "0.10.0"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
@@ -1167,6 +1183,12 @@ deps = ["LinearAlgebra"]
 git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
 uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 version = "0.5.1"
+
+[[deps.CategoricalArrays]]
+deps = ["DataAPI", "Future", "Missings", "Printf", "Requires", "Statistics", "Unicode"]
+git-tree-sha1 = "5084cc1a28976dd1642c9f337b28a3cb03e0f7d2"
+uuid = "324d7699-5711-5eae-9e2f-1d82baa6b597"
+version = "0.10.7"
 
 [[deps.Chain]]
 git-tree-sha1 = "8c4920235f6c561e401dfe569beb8b924adad003"
@@ -1192,10 +1214,10 @@ uuid = "a2cac450-b92f-5266-8821-25eda20663c8"
 version = "0.4.0"
 
 [[deps.ColorSchemes]]
-deps = ["ColorTypes", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Random"]
-git-tree-sha1 = "1fd869cc3875b57347f7027521f561cf46d1fcd8"
+deps = ["ColorTypes", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Random", "SnoopPrecompile"]
+git-tree-sha1 = "aa3edc8f8dea6cbfa176ee12f7c2fc82f0608ed3"
 uuid = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
-version = "3.19.0"
+version = "3.20.0"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
@@ -1211,9 +1233,9 @@ version = "0.9.9"
 
 [[deps.Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
-git-tree-sha1 = "417b0ed7b8b838aa6ca0a87aadf1bb9eb111ce40"
+git-tree-sha1 = "73e9c4144410f6b11f2f818488728d3afd60943c"
 uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
-version = "0.12.8"
+version = "0.12.9"
 
 [[deps.CommonSolve]]
 git-tree-sha1 = "9441451ee712d1aec22edad62db1a9af3dc8d852"
@@ -1222,9 +1244,9 @@ version = "0.2.3"
 
 [[deps.Compat]]
 deps = ["Dates", "LinearAlgebra", "UUIDs"]
-git-tree-sha1 = "aaabba4ce1b7f8a9b34c015053d3b1edf60fa49c"
+git-tree-sha1 = "00a2cccc7f098ff3b66806862d275ca3db9e6e5a"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "4.4.0"
+version = "4.5.0"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1260,9 +1282,9 @@ version = "0.4.0"
 
 [[deps.DataFrames]]
 deps = ["Compat", "DataAPI", "Future", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrettyTables", "Printf", "REPL", "Random", "Reexport", "SnoopPrecompile", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "0f44494fe4271cc966ac4fea524111bef63ba86c"
+git-tree-sha1 = "d4f69885afa5e6149d0cab3818491565cf41446d"
 uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "1.4.3"
+version = "1.4.4"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -1303,15 +1325,15 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Test"]
-git-tree-sha1 = "7fe1eff48e18a91946ff753baf834ff4d5c03744"
+git-tree-sha1 = "a7756d098cbabec6b3ac44f369f74915e8cfd70a"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.78"
+version = "0.25.79"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
-git-tree-sha1 = "c36550cb29cbe373e95b3f40486b9a4148f89ffd"
+git-tree-sha1 = "2fb1e02f2b635d0845df5d7c167fec4dd739b00d"
 uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
-version = "0.9.2"
+version = "0.9.3"
 
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
@@ -1376,9 +1398,9 @@ uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
 
 [[deps.FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "Statistics"]
-git-tree-sha1 = "802bfc139833d2ba893dd9e62ba1767c88d708ae"
+git-tree-sha1 = "9a0472ec2f5409db243160a8b030f94c380167a3"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
-version = "0.13.5"
+version = "0.13.6"
 
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
@@ -1432,6 +1454,12 @@ git-tree-sha1 = "884477b9886a52a84378275737e2823a5c98e349"
 uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
 version = "1.8.1"
 
+[[deps.GPUArraysCore]]
+deps = ["Adapt"]
+git-tree-sha1 = "6872f5ec8fd1a38880f027a26739d42dcda6691f"
+uuid = "46192b85-c4d5-4398-a991-12ede77f4527"
+version = "0.1.2"
+
 [[deps.GeoInterface]]
 deps = ["Extents"]
 git-tree-sha1 = "fb28b5dc239d0174d7297310ef7b84a11804dfab"
@@ -1458,9 +1486,9 @@ version = "2.74.0+2"
 
 [[deps.GraphMakie]]
 deps = ["GeometryBasics", "Graphs", "LinearAlgebra", "Makie", "NetworkLayout", "StaticArrays"]
-git-tree-sha1 = "693642d05cc34f336c3b01e7b722024ab308ac78"
+git-tree-sha1 = "da596204780670d848c5bf35aff1f8580b885e09"
 uuid = "1ecd5474-83a3-4783-bb4f-06765db800d2"
-version = "0.4.3"
+version = "0.5.0"
 
 [[deps.Graphics]]
 deps = ["Colors", "LinearAlgebra", "NaNMath"]
@@ -1521,6 +1549,18 @@ git-tree-sha1 = "f7be53659ab06ddc986428d3a9dcc95f6fa6705a"
 uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
 version = "0.2.2"
 
+[[deps.ImageAxes]]
+deps = ["AxisArrays", "ImageBase", "ImageCore", "Reexport", "SimpleTraits"]
+git-tree-sha1 = "c54b581a83008dc7f292e205f4c409ab5caa0f04"
+uuid = "2803e5a7-5153-5ecf-9a86-9b4c37f5f5ac"
+version = "0.6.10"
+
+[[deps.ImageBase]]
+deps = ["ImageCore", "Reexport"]
+git-tree-sha1 = "b51bb8cae22c66d0f6357e3bcb6363145ef20835"
+uuid = "c817782e-172a-44cc-b673-b171935fbb9e"
+version = "0.1.5"
+
 [[deps.ImageCore]]
 deps = ["AbstractFFTs", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Graphics", "MappedArrays", "MosaicViews", "OffsetArrays", "PaddedViews", "Reexport"]
 git-tree-sha1 = "acf614720ef026d38400b3817614c45882d75500"
@@ -1532,6 +1572,12 @@ deps = ["FileIO", "IndirectArrays", "JpegTurbo", "LazyModules", "Netpbm", "OpenE
 git-tree-sha1 = "342f789fd041a55166764c351da1710db97ce0e0"
 uuid = "82e4d734-157c-48bb-816b-45c225c6df19"
 version = "0.6.6"
+
+[[deps.ImageMetadata]]
+deps = ["AxisArrays", "ImageAxes", "ImageBase", "ImageCore"]
+git-tree-sha1 = "36cbaebed194b292590cba2593da27b34763804a"
+uuid = "bc367c6b-8a6b-528e-b4bd-a4b897500b49"
+version = "0.9.8"
 
 [[deps.Imath_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1566,15 +1612,15 @@ uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[deps.Interpolations]]
 deps = ["Adapt", "AxisAlgorithms", "ChainRulesCore", "LinearAlgebra", "OffsetArrays", "Random", "Ratios", "Requires", "SharedArrays", "SparseArrays", "StaticArrays", "WoodburyMatrices"]
-git-tree-sha1 = "842dd89a6cb75e02e85fdd75c760cdc43f5d6863"
+git-tree-sha1 = "721ec2cf720536ad005cb38f50dbba7b02419a15"
 uuid = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
-version = "0.14.6"
+version = "0.14.7"
 
 [[deps.IntervalSets]]
 deps = ["Dates", "Random", "Statistics"]
-git-tree-sha1 = "3f91cd3f56ea48d4d2a75c2a65455c5fc74fa347"
+git-tree-sha1 = "16c0cc91853084cb5f58a78bd209513900206ce6"
 uuid = "8197267c-284f-5f27-9208-e0e47529a953"
-version = "0.7.3"
+version = "0.7.4"
 
 [[deps.InverseFunctions]]
 deps = ["Test"]
@@ -1583,9 +1629,9 @@ uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
 version = "0.1.8"
 
 [[deps.InvertedIndices]]
-git-tree-sha1 = "bee5f1ef5bf65df56bdd2e40447590b272a5471f"
+git-tree-sha1 = "82aec7a3dd64f4d9584659dc0b62ef7db2ef3e19"
 uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
-version = "1.1.0"
+version = "1.2.0"
 
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "7fd44fd4ff43fc60815f8e764c0f352b83c49151"
@@ -1734,9 +1780,9 @@ version = "0.5.4"
 
 [[deps.LogExpFunctions]]
 deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "94d9c52ca447e23eac0c0f074effbcd38830deb5"
+git-tree-sha1 = "946607f84feb96220f480e0422d3484c49c00239"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.3.18"
+version = "0.3.19"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -1759,16 +1805,16 @@ uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 version = "0.5.10"
 
 [[deps.Makie]]
-deps = ["Animations", "Base64", "ColorBrewer", "ColorSchemes", "ColorTypes", "Colors", "Contour", "Distributions", "DocStringExtensions", "FFMPEG", "FileIO", "FixedPointNumbers", "Formatting", "FreeType", "FreeTypeAbstraction", "GeometryBasics", "GridLayoutBase", "ImageIO", "InteractiveUtils", "IntervalSets", "Isoband", "KernelDensity", "LaTeXStrings", "LinearAlgebra", "MakieCore", "Markdown", "Match", "MathTeXEngine", "MiniQhull", "Observables", "OffsetArrays", "Packing", "PlotUtils", "PolygonOps", "Printf", "Random", "RelocatableFolders", "Serialization", "Showoff", "SignedDistanceFields", "SnoopPrecompile", "SparseArrays", "Statistics", "StatsBase", "StatsFuns", "StructArrays", "TriplotBase", "UnicodeFun"]
-git-tree-sha1 = "d3b9553c2f5e0ca588e4395a9508cef024bd9e8a"
+deps = ["Animations", "Base64", "ColorBrewer", "ColorSchemes", "ColorTypes", "Colors", "Contour", "Distributions", "DocStringExtensions", "FFMPEG", "FileIO", "FixedPointNumbers", "Formatting", "FreeType", "FreeTypeAbstraction", "GeometryBasics", "GridLayoutBase", "ImageIO", "InteractiveUtils", "IntervalSets", "Isoband", "KernelDensity", "LaTeXStrings", "LinearAlgebra", "MakieCore", "Markdown", "Match", "MathTeXEngine", "MiniQhull", "Observables", "OffsetArrays", "Packing", "PlotUtils", "PolygonOps", "Printf", "Random", "RelocatableFolders", "Serialization", "Setfield", "Showoff", "SignedDistanceFields", "SnoopPrecompile", "SparseArrays", "Statistics", "StatsBase", "StatsFuns", "StructArrays", "TriplotBase", "UnicodeFun"]
+git-tree-sha1 = "7154536d78dcde1c4321b50e0e8dda90995f1f6f"
 uuid = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-version = "0.18.3"
+version = "0.19.0"
 
 [[deps.MakieCore]]
 deps = ["Observables"]
-git-tree-sha1 = "c1885d865632e7f37e5a1489a164f44c54fb80c9"
+git-tree-sha1 = "5357b0696f7c245941389995e193c127190d45f8"
 uuid = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
-version = "0.5.2"
+version = "0.6.0"
 
 [[deps.MappedArrays]]
 git-tree-sha1 = "e8b359ef06ec72e8c030463fe02efe5527ee5142"
@@ -1812,9 +1858,9 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[deps.MosaicViews]]
 deps = ["MappedArrays", "OffsetArrays", "PaddedViews", "StackViews"]
-git-tree-sha1 = "b34e3bc3ca7c94914418637cb10cc4d1d80d877d"
+git-tree-sha1 = "7b86a5d4d70a9f5cdf2dacb3cbe6d251d1a61dbe"
 uuid = "e94cdb99-869f-56ef-bcf0-1ae2bcbe0389"
-version = "0.3.3"
+version = "0.3.4"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
@@ -1827,10 +1873,10 @@ uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "1.0.1"
 
 [[deps.Netpbm]]
-deps = ["FileIO", "ImageCore"]
-git-tree-sha1 = "18efc06f6ec36a8b801b23f076e3c6ac7c3bf153"
+deps = ["FileIO", "ImageCore", "ImageMetadata"]
+git-tree-sha1 = "5ae7ca23e13855b3aba94550f26146c01d259267"
 uuid = "f09324ee-3d7c-5217-9330-fc30815ba969"
-version = "1.0.2"
+version = "1.1.0"
 
 [[deps.NetworkLayout]]
 deps = ["GeometryBasics", "LinearAlgebra", "Random", "Requires", "SparseArrays"]
@@ -1844,9 +1890,9 @@ version = "1.2.0"
 
 [[deps.NetworksUtils]]
 deps = ["GraphMakie", "Graphs", "InteractiveUtils", "Makie", "Markdown", "NetworkLayout", "SimpleWeightedGraphs", "Statistics"]
-git-tree-sha1 = "ffdf14f92843b4a125a7351494f88e3f504a7f1f"
+git-tree-sha1 = "24f83862d87f6812738f29ee38bba0bcab03ea23"
 uuid = "4943429a-ba68-4c19-ade3-7332adbb3997"
-version = "0.1.2"
+version = "0.1.4"
 
 [[deps.Observables]]
 git-tree-sha1 = "6862738f9796b3edc1c09d0890afce4eca9e7e93"
@@ -1970,15 +2016,15 @@ version = "0.3.2"
 
 [[deps.PlotUtils]]
 deps = ["ColorSchemes", "Colors", "Dates", "Printf", "Random", "Reexport", "SnoopPrecompile", "Statistics"]
-git-tree-sha1 = "21303256d239f6b484977314674aef4bb1fe4420"
+git-tree-sha1 = "5b7690dd212e026bbab1860016a6601cb077ab66"
 uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
-version = "1.3.1"
+version = "1.3.2"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "efc140104e6d0ae3e7e30d56c98c4a927154d684"
+git-tree-sha1 = "eadad7b14cf046de6eb41f13c9275e5aa2711ab6"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.48"
+version = "0.7.49"
 
 [[deps.PolygonOps]]
 git-tree-sha1 = "77b3d3605fc1cd0b42d95eba87dfcd2bf67d5ff6"
@@ -1999,9 +2045,9 @@ version = "1.3.0"
 
 [[deps.PrettyTables]]
 deps = ["Crayons", "Formatting", "LaTeXStrings", "Markdown", "Reexport", "StringManipulation", "Tables"]
-git-tree-sha1 = "d8ed354439950b34ab04ff8f3dfd49e11bc6c94b"
+git-tree-sha1 = "96f6db03ab535bdb901300f88335257b0018689d"
 uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "2.2.1"
+version = "2.2.2"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -2027,9 +2073,9 @@ version = "1.0.0+1"
 
 [[deps.Qhull_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "695c3049ad94fa38b7f1e8243cdcee27ecad0867"
+git-tree-sha1 = "238dd7e2cc577281976b9681702174850f8d4cbc"
 uuid = "784f63db-0788-585a-bace-daefebcd302b"
-version = "8.0.1000+0"
+version = "8.0.1001+0"
 
 [[deps.QuadGK]]
 deps = ["DataStructures", "LinearAlgebra"]
@@ -2044,6 +2090,11 @@ uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 [[deps.Random]]
 deps = ["SHA", "Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+
+[[deps.RangeArrays]]
+git-tree-sha1 = "b9039e93773ddcfc828f12aadf7115b4b4d225f5"
+uuid = "b3c3ace0-ae52-54e7-9d0b-2c1406fd6b9d"
+version = "0.3.2"
 
 [[deps.Ratios]]
 deps = ["Requires"]
@@ -2187,9 +2238,9 @@ version = "0.1.1"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
-git-tree-sha1 = "4e051b85454b4e4f66e6a6b7bdc452ad9da3dcf6"
+git-tree-sha1 = "ffc098086f35909741f71ce21d03dadf0d2bfa76"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.5.10"
+version = "1.5.11"
 
 [[deps.StaticArraysCore]]
 git-tree-sha1 = "6b7ba252635a5eff6a0b0664a41ee140a1c9e72a"
@@ -2214,9 +2265,9 @@ version = "0.33.21"
 
 [[deps.StatsFuns]]
 deps = ["ChainRulesCore", "HypergeometricFunctions", "InverseFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
-git-tree-sha1 = "5783b877201a82fc0014cbf381e7e6eb130473a4"
+git-tree-sha1 = "ab6083f09b3e617e34a956b43e9d51b824206932"
 uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
-version = "1.0.1"
+version = "1.1.1"
 
 [[deps.StatsModels]]
 deps = ["DataAPI", "DataStructures", "LinearAlgebra", "Printf", "REPL", "ShiftedArrays", "SparseArrays", "StatsBase", "StatsFuns", "Tables"]
@@ -2230,10 +2281,10 @@ uuid = "892a3eda-7b42-436c-8928-eab12a02cf0e"
 version = "0.3.0"
 
 [[deps.StructArrays]]
-deps = ["Adapt", "DataAPI", "StaticArraysCore", "Tables"]
-git-tree-sha1 = "13237798b407150a6d2e2bce5d793d7d9576e99e"
+deps = ["Adapt", "DataAPI", "GPUArraysCore", "StaticArraysCore", "Tables"]
+git-tree-sha1 = "b03a3b745aa49b566f128977a7dd1be8711c5e71"
 uuid = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
-version = "0.6.13"
+version = "0.6.14"
 
 [[deps.SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
@@ -2279,9 +2330,9 @@ version = "0.6.2"
 
 [[deps.TranscodingStreams]]
 deps = ["Random", "Test"]
-git-tree-sha1 = "8a75929dcd3c38611db2f8d08546decb514fcadf"
+git-tree-sha1 = "e4bdc63f5c6d62e80eb1c0043fcc0360d5950ff7"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
-version = "0.9.9"
+version = "0.9.10"
 
 [[deps.Tricks]]
 git-tree-sha1 = "6bac775f2d42a611cdfcd1fb217ee719630c4175"
@@ -2294,9 +2345,9 @@ uuid = "981d1d27-644d-49a2-9326-4793e63143c3"
 version = "0.1.0"
 
 [[deps.URIs]]
-git-tree-sha1 = "e59ecc5a41b000fa94423a578d29290c7266fc10"
+git-tree-sha1 = "ac00576f90d8a259f2c9d823e91d1de3fd44d348"
 uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
-version = "1.4.0"
+version = "1.4.1"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
@@ -2474,7 +2525,6 @@ version = "3.5.0+0"
 # ╠═952825f3-7f66-4435-a850-cbe160106f6f
 # ╠═58481389-ded5-4b52-9760-ece0d381451e
 # ╠═1cad0937-5ecd-4b0a-871c-de8c2f75d7b7
-# ╠═c59a6cc9-f9bd-4831-9bd8-7bc331d5790f
 # ╠═2da46c3d-dd64-424f-8fe9-b6ba1156f423
 # ╠═62a50fdf-4c81-4adf-9366-40362cbefb83
 # ╠═63ed5af7-2c4d-4184-8559-ec6977f04709
@@ -2484,14 +2534,19 @@ version = "3.5.0+0"
 # ╠═162e1da7-0d14-464f-8f64-66804009bc5d
 # ╠═c46f9af5-6bd5-49fe-8086-44b238d5a8a1
 # ╟─afa36073-424e-4ff8-b584-554ae66cee06
-# ╠═0a2dfc44-67f8-4e9f-991f-906509116d66
-# ╟─51f5c242-54af-4511-9838-58326756197d
-# ╠═1d00ca98-985a-489c-9ef4-d74f558d9b71
-# ╠═517b4257-4097-4ab4-8ddb-34e877f6ad15
-# ╠═eabcafbd-5c35-4ee9-a50c-d129f8d3a34a
 # ╟─49b4eef5-4544-452b-b09c-4a36c5e99b12
+# ╟─8873a586-b7b1-474b-8670-95007ebb1ceb
+# ╟─0f81552e-c4cf-495e-b1c7-782fe2d7b204
+# ╟─6e9977c1-b74e-4092-a858-1c1516bd3fe5
+# ╟─1d73462f-7016-466c-97af-cb2cd2f8785f
+# ╟─51f5c242-54af-4511-9838-58326756197d
+# ╟─517b4257-4097-4ab4-8ddb-34e877f6ad15
+# ╟─7e46af06-58f4-44d3-98c0-f9b41f4d8d84
+# ╠═0a2dfc44-67f8-4e9f-991f-906509116d66
+# ╠═eabcafbd-5c35-4ee9-a50c-d129f8d3a34a
+# ╠═1d00ca98-985a-489c-9ef4-d74f558d9b71
+# ╟─deaf2d86-d3ba-4b7c-9700-062c6b8c3a2c
 # ╠═d5dc8002-0d8e-4681-a6a5-4d5fc49f9288
-# ╠═fc4fa10d-2b39-4f10-bac8-7a1e5467669d
 # ╠═fcb09a02-70ca-4da0-bab9-6f2d9da6a195
 # ╠═3d037a99-7978-4fce-b603-535a90362f40
 # ╠═d816a40a-67c1-4a1a-ae0c-d26502ba3918
@@ -2501,27 +2556,29 @@ version = "3.5.0+0"
 # ╠═92c4efe9-6ba1-4895-a3c8-05ec312a3820
 # ╠═8028be99-7559-4974-91a6-36ccab2d4a7f
 # ╠═af1b2d6d-0ac8-4bbf-b0da-adf65f27330e
-# ╠═8d9c009d-7434-4d8b-884f-2725639b2748
-# ╠═ac36c36f-1ecc-4e3c-b421-1e414dba0fdd
 # ╟─ed67cfcb-b83d-4b8b-b698-00e91056523a
-# ╠═6e9977c1-b74e-4092-a858-1c1516bd3fe5
+# ╠═ab94d435-1bf2-4344-8aee-7a8ed99c1c7a
 # ╠═4ef94a94-e170-4591-81fc-33f50a605367
 # ╠═21985363-5538-41b5-b2df-5cc3131040c3
 # ╠═05688f6e-afa8-407b-867b-884a753c4ea9
 # ╠═2a5f0419-3cf5-483a-921d-f53a49e3c096
-# ╟─0f81552e-c4cf-495e-b1c7-782fe2d7b204
-# ╠═1a7cbefb-2e2b-4cc5-81e7-caccc970e29a
 # ╠═789efa32-9af5-4325-ae94-4bae9e9ecbfc
 # ╠═82ecd66b-d854-455e-b57e-42a318cd66cd
 # ╠═ca99d6ff-1ab1-4de1-9009-2ebdbb49140e
-# ╠═7e12dd72-2d66-4d94-8af6-084e80a63885
-# ╠═fde5439e-d1ed-43e7-be89-d8f41eff3817
-# ╠═7e46af06-58f4-44d3-98c0-f9b41f4d8d84
 # ╠═5e65f0a8-93c9-4698-8cf3-30df9992334a
-# ╠═1b470abb-bf1e-4ec6-a5c8-5f05e86c87dc
 # ╟─a15f8d3c-2bb2-40d0-9439-701fbd8dd47c
 # ╠═57945142-4153-4c89-bef6-bb8bb0b6a7d8
 # ╠═5e26f5e4-0af9-4c2c-bba7-cfa53547e5e9
+# ╠═2a8b0a1b-7bbb-4495-a930-773d8205da4e
+# ╠═1b470abb-bf1e-4ec6-a5c8-5f05e86c87dc
+# ╠═7e12dd72-2d66-4d94-8af6-084e80a63885
+# ╠═fde5439e-d1ed-43e7-be89-d8f41eff3817
+# ╠═c59a6cc9-f9bd-4831-9bd8-7bc331d5790f
+# ╟─b14aac81-cb88-47af-809e-751fb6cf8ee6
+# ╠═aaa05ff2-88a8-43ce-be56-e2c3d10a6bb8
+# ╠═bf719a9e-9b10-4584-82e9-af7ec4f84325
+# ╠═a54b52cf-bed9-4b42-a478-a7210fbb19fb
+# ╠═2a2ba7c6-5063-4347-bddc-2069515fb04a
 # ╟─1c225b52-55d9-44f9-947c-b16ce9bf481f
 # ╠═4bcf6d95-0fd1-4d60-9600-54ee8015e21f
 # ╠═2b8766af-b3b8-4e3a-9751-96e68c321acc
