@@ -25,9 +25,6 @@ using Graphs
 # ╔═╡ c46f9af5-6bd5-49fe-8086-44b238d5a8a1
 using LinearAlgebra: I
 
-# ╔═╡ fc4fa10d-2b39-4f10-bac8-7a1e5467669d
-using Makie
-
 # ╔═╡ fcb09a02-70ca-4da0-bab9-6f2d9da6a195
 using SimpleWeightedGraphs
 
@@ -51,6 +48,9 @@ using DataFrameMacros
 
 # ╔═╡ 57945142-4153-4c89-bef6-bb8bb0b6a7d8
 using DocStringExtensions
+
+# ╔═╡ 4bcf6d95-0fd1-4d60-9600-54ee8015e21f
+using Makie: @key_str
 
 # ╔═╡ ec9e91ef-fff8-4d7f-8df3-86df19ced7ed
 md"""
@@ -338,6 +338,253 @@ md"""
 2. ``0 ≤ ν + y - c - x ≤ a``, so that there is default when dividends shrink to zero
 """
 
+# ╔═╡ 49b4eef5-4544-452b-b09c-4a36c5e99b12
+md"""
+# Visualizations
+"""
+
+# ╔═╡ d5dc8002-0d8e-4681-a6a5-4d5fc49f9288
+# ╠═╡ skip_as_script = true
+#=╠═╡
+import CairoMakie
+  ╠═╡ =#
+
+# ╔═╡ fc4fa10d-2b39-4f10-bac8-7a1e5467669d
+#using Makie
+
+# ╔═╡ 72de5ce2-6bab-4f9a-b45a-4559fa3affea
+function mix_with_white(color, α)
+	(; r, g, b) = RGB(color)
+	(r, g, b) .* (1-α) .+ α |> x -> RGB(x...)
+end
+
+# ╔═╡ d816a40a-67c1-4a1a-ae0c-d26502ba3918
+mix_with_white(colorant"limegreen", 0.5)
+
+# ╔═╡ cbcdef2e-d854-47c9-bfc4-595c90ea50fb
+md"""
+## Visualize bank-firm-network
+"""
+
+# ╔═╡ ac36c36f-1ecc-4e3c-b421-1e414dba0fdd
+
+
+# ╔═╡ ed67cfcb-b83d-4b8b-b698-00e91056523a
+md"""
+## Visualize bank balance sheet
+"""
+
+# ╔═╡ a15f8d3c-2bb2-40d0-9439-701fbd8dd47c
+md"""
+# Appendix
+"""
+
+# ╔═╡ 5e26f5e4-0af9-4c2c-bba7-cfa53547e5e9
+#=╠═╡
+TableOfContents()
+  ╠═╡ =#
+
+# ╔═╡ 1c225b52-55d9-44f9-947c-b16ce9bf481f
+md"""
+## `LaTeXStrings` as `bar_labels`
+"""
+
+# ╔═╡ 7c14ee7d-4f10-45cd-ab67-aff9ce724402
+function get_xshift(lb, ub, align; default=0.5f0)
+    if align isa Symbol
+        align = align == :left   ? 0.0f0 :
+                align == :center ? 0.5f0 :
+                align == :right  ? 1.0f0 : default
+    end
+    lb * (1-align) + ub * align |> Float32
+end
+
+# ╔═╡ 109dbddf-7ee9-461e-b134-09ab3c0790f3
+function get_yshift(lb, ub, align; default=0.5f0)
+    if align isa Symbol
+        align = align == :bottom ? 0.0f0 :
+                align == :center ? 0.5f0 :
+                align == :top    ? 1.0f0 : default
+    end
+    lb * (1-align) + ub * align |> Float32
+end
+
+# ╔═╡ 2b8766af-b3b8-4e3a-9751-96e68c321acc
+begin
+using Makie
+	
+using Makie.LaTeXStrings
+	
+using Makie: automatic, compute_x_and_width, barplot_labels, bar_rectangle, generate_tex_elements, TeXChar, FreeTypeAbstraction, GlyphExtent, height_insensitive_boundingbox_with_advance, origin, GlyphCollection, stack_grouped_from_to, ATTRIBUTES, theme, bar_label_formatter
+	
+function Makie.plot!(p::BarPlot)
+
+    labels = Observable(Tuple{Union{String,LaTeXStrings.LaTeXString}, Point2f}[])
+    label_aligns = Observable(Vec2f[])
+    label_offsets = Observable(Vec2f[])
+    label_colors = Observable(RGBAf[])
+    function calculate_bars(xy, fillto, offset, width, dodge, n_dodge, gap, dodge_gap, stack,
+                            dir, bar_labels, flip_labels_at, label_color, color_over_background,
+                            color_over_bar, label_formatter, label_offset)
+
+        in_y_direction = get((y=true, x=false), dir) do
+            error("Invalid direction $dir. Options are :x and :y.")
+        end
+
+        x = first.(xy)
+        y = last.(xy)
+
+        # by default, `width` is `minimum(diff(sort(unique(x)))`
+        if width === automatic
+            x_unique = unique(filter(isfinite, x))
+            x_diffs = diff(sort(x_unique))
+            width = isempty(x_diffs) ? 1.0 : minimum(x_diffs)
+        end
+
+        # compute width of bars and x̂ (horizontal position after dodging)
+        x̂, barwidth = compute_x_and_width(x, width, gap, dodge, n_dodge, dodge_gap)
+
+        # --------------------------------
+        # ----------- Stacking -----------
+        # --------------------------------
+
+        if stack === automatic
+            if fillto === automatic
+                fillto = offset
+            end
+        elseif eltype(stack) <: Integer
+            fillto === automatic || @warn "Ignore keyword fillto when keyword stack is provided"
+            if !iszero(offset)
+                @warn "Ignore keyword offset when keyword stack is provided"
+                offset = 0.0
+            end
+            i_stack = stack
+
+            from, to = stack_grouped_from_to(i_stack, y, (x = x̂,))
+            y, fillto = to, from
+        else
+            ArgumentError("The keyword argument `stack` currently supports only `AbstractVector{<: Integer}`") |> throw
+        end
+
+        # --------------------------------
+        # ----------- Labels -------------
+        # --------------------------------
+
+        if !isnothing(bar_labels)
+            oback = color_over_background === automatic ? label_color : color_over_background
+            obar = color_over_bar === automatic ? label_color : color_over_bar
+            label_args = barplot_labels(x̂, y, bar_labels, in_y_direction,
+                                        flip_labels_at, to_color(oback), to_color(obar),
+                                        label_formatter, label_offset)
+            labels[], label_aligns[], label_offsets[], label_colors[] = label_args
+        end
+
+        return bar_rectangle.(x̂, y .+ offset, barwidth, fillto, in_y_direction)
+    end
+
+    bars = lift(calculate_bars, p[1], p.fillto, p.offset, p.width, p.dodge, p.n_dodge, p.gap,
+                p.dodge_gap, p.stack, p.direction, p.bar_labels, p.flip_labels_at,
+                p.label_color, p.color_over_background, p.color_over_bar, p.label_formatter, p.label_offset)
+
+    poly!(
+        p, bars, color = p.color, colormap = p.colormap, colorrange = p.colorrange,
+        strokewidth = p.strokewidth, strokecolor = p.strokecolor, visible = p.visible,
+        inspectable = p.inspectable, transparency = p.transparency,
+        highclip = p.highclip, lowclip = p.lowclip, nan_color = p.nan_color,
+    )
+    if !isnothing(p.bar_labels[])
+		#@info p.label_size[]
+        text!(p, labels; align=label_aligns, offset=label_offsets, color=label_colors, font=p.label_font, textsize=p.label_size,
+		rotation=p.label_rotation)
+    end
+end
+
+function Makie.texelems_and_glyph_collection(str::LaTeXString, fontscale_px, halign, valign,
+        rotation, color, strokecolor, strokewidth, word_wrap_width)
+
+    rot = convert_attribute(rotation, key"rotation"())
+
+    all_els = generate_tex_elements(str)
+    els = filter(x -> x[1] isa TeXChar, all_els)
+
+    # hacky, but attr per char needs to be fixed
+    fs = Vec2f(first(fontscale_px))
+
+    scales_2d = [Vec2f(x[3] * Vec2f(fs)) for x in els]
+
+    texchars = [x[1] for x in els]
+    glyphindices = [FreeTypeAbstraction.glyph_index(texchar) for texchar in texchars]
+    fonts = [texchar.font for texchar in texchars]
+    extents = GlyphExtent.(texchars)
+
+    bboxes = map(extents, scales_2d) do ext, scale
+        unscaled_hi_bb = height_insensitive_boundingbox_with_advance(ext)
+        return Rect2f(
+            origin(unscaled_hi_bb) * scale,
+            widths(unscaled_hi_bb) * scale
+        )
+    end
+
+    basepositions = [to_ndim(Vec3f, fs, 0) .* to_ndim(Point3f, x[2], 0) for x in els]
+
+    if word_wrap_width > 0
+        last_space_idx = 0
+        last_newline_idx = 1
+        newline_offset = Point3f(basepositions[1][1], 0f0, 0)
+
+        for i in eachindex(texchars)
+            basepositions[i] -= newline_offset
+            if texchars[i].represented_char == ' ' || i == length(texchars)
+                right_pos = basepositions[i][1] + width(bboxes[i])
+                if last_space_idx != 0 && right_pos > word_wrap_width
+                    section_offset = basepositions[last_space_idx + 1][1]
+                    lineheight = maximum((height(bb) for bb in bboxes[last_newline_idx:last_space_idx]))
+                    last_newline_idx = last_space_idx+1
+                    newline_offset += Point3f(section_offset, lineheight, 0)
+
+                    # TODO: newlines don't really need to represented at all?
+                    # chars[last_space_idx] = '\n'
+                    for j in last_space_idx+1:i
+                        basepositions[j] -= Point3f(section_offset, lineheight, 0)
+                    end
+                end
+                last_space_idx = i
+            elseif texchars[i].represented_char == '\n'
+                last_space_idx = 0
+            end
+        end
+    end
+
+    bb = isempty(bboxes) ? BBox(0, 0, 0, 0) : begin
+        mapreduce(union, zip(bboxes, basepositions)) do (b, pos)
+            Rect2f(Rect3f(b) + pos)
+        end
+    end
+
+    xshift = get_xshift(minimum(bb)[1], maximum(bb)[1], halign)
+    yshift = get_yshift(minimum(bb)[2], maximum(bb)[2], valign, default=0f0)
+    
+    shift = Vec3f(xshift, yshift, 0)
+    positions = basepositions .- Ref(shift)
+    positions .= Ref(rot) .* positions
+
+    pre_align_gl = GlyphCollection(
+        glyphindices,
+        fonts,
+        Point3f.(positions),
+        extents,
+        scales_2d,
+        rot,
+        color,
+        strokecolor,
+        strokewidth
+    )
+
+    all_els, pre_align_gl, Point2f(xshift, yshift)
+end
+
+end
+
 # ╔═╡ 51f5c242-54af-4511-9838-58326756197d
 #=╠═╡
 md"""
@@ -400,31 +647,6 @@ end
 #=╠═╡
 RES.firm_df
   ╠═╡ =#
-
-# ╔═╡ 49b4eef5-4544-452b-b09c-4a36c5e99b12
-md"""
-# Visualizations
-"""
-
-# ╔═╡ d5dc8002-0d8e-4681-a6a5-4d5fc49f9288
-# ╠═╡ skip_as_script = true
-#=╠═╡
-import CairoMakie
-  ╠═╡ =#
-
-# ╔═╡ 72de5ce2-6bab-4f9a-b45a-4559fa3affea
-function mix_with_white(color, α)
-	(; r, g, b) = RGB(color)
-	(r, g, b) .* (1-α) .+ α |> x -> RGB(x...)
-end
-
-# ╔═╡ d816a40a-67c1-4a1a-ae0c-d26502ba3918
-mix_with_white(colorant"limegreen", 0.5)
-
-# ╔═╡ cbcdef2e-d854-47c9-bfc4-595c90ea50fb
-md"""
-## Visualize bank-firm-network
-"""
 
 # ╔═╡ 8028be99-7559-4974-91a6-36ccab2d4a7f
 function visualize_bank_firm_network!(ax, IM, shares, bank_df, firm_df; r = 1.4, start = Makie.automatic, layout=Makie.automatic, kwargs...)
@@ -524,11 +746,6 @@ let
 	fig
 end
 
-# ╔═╡ ed67cfcb-b83d-4b8b-b698-00e91056523a
-md"""
-## Visualize bank balance sheet
-"""
-
 # ╔═╡ 2a5f0419-3cf5-483a-921d-f53a49e3c096
 function balance_sheet_palette()
 	color_df = DataFrame(
@@ -551,15 +768,15 @@ md"""
 # ╔═╡ 789efa32-9af5-4325-ae94-4bae9e9ecbfc
 function _balance_sheet_df_((; c, x, div, ill, rec, ν_paid, y_paid, shortfall))
 	DataFrame([
-		(color = "external",  side = "receivable", ill=false, val=c, lab="cash 𝑐"),
-		(color = "interbank", side = "receivable", ill=false, val=x, lab="IB deposit 𝑥"),
-		(color = "firm",   side = "receivable", ill=false, val=div, lab="dividend δ"),
+		(color = "external",  side = "receivable", ill=false, val=c, lab=L"cash $c$"),
+		(color = "interbank", side = "receivable", ill=false, val=x, lab=L"IB deposit $x$"),
+		(color = "firm",   side = "receivable", ill=false, val=div, lab=L"dividend $δ$"),
 		
 		(color = "firm",   side = "receivable", ill=true,  val=ill, lab="illiquid"),
 		(color = "liquidated", side = "receivable", ill=false, val=rec, lab=""),
 		
 		(color = "external",  side = "payable",    ill=false, val=ν_paid, lab="deposits ν"),
-		(color = "interbank", side = "payable",    ill=false, val=y_paid, lab="IB debt 𝑦"),
+		(color = "interbank", side = "payable",    ill=false, val=y_paid, lab=L"IB debt $y$"),
 		(color = "shortfall", side = "payable",    ill=false,  val=shortfall, lab=""),
 	])
 end
@@ -602,7 +819,7 @@ function _visualize_simple_balance_sheet_((; c, ν), firm, (; x, y))
 		:val => "",
 		stack=:color, color=:color => "",
 		bar_labels=:lab => verbatim
-	) * visual(BarPlot, flip_labels_at = 0)
+	) * visual(BarPlot, flip_labels_at = 0, label_size=15)
 end
   ╠═╡ =#
 
@@ -697,7 +914,7 @@ let
 		disallowmissing!
 		@transform!(:i_side = :side == "receivable" ? 1 : 2)
 		@transform!(:fill = (Makie.wong_colors()[:i_color], 0.5 + 0.5 * (:ill == false)))
-		barplot!(ax, _.i_side, _.val, stack = _.i_color, color = _.fill, bar_labels = _.lab, flip_labels_at = 0
+		barplot!(ax, _.i_side, _.val, stack = _.i_color, color = _.fill, bar_labels = _.lab, flip_labels_at = 0, label_size = 15
 		)
 	end
 
@@ -792,15 +1009,21 @@ let
 end
   ╠═╡ =#
 
-# ╔═╡ a15f8d3c-2bb2-40d0-9439-701fbd8dd47c
-md"""
-# Appendix
-"""
+# ╔═╡ b4ac5a2e-ed01-4bed-9183-dec5fe614990
+let
+	fig = Figure()
+	lab1 = L"a - b"
+	lab2 = L"\frac{a}{b} - \sqrt{b}"
 
-# ╔═╡ 5e26f5e4-0af9-4c2c-bba7-cfa53547e5e9
-#=╠═╡
-TableOfContents()
-  ╠═╡ =#
+	barplot(fig[1,1], [1, 2], [0.5, 0.2], bar_labels = [lab1, lab1], flip_labels_at = 0.3, direction=:x)
+	barplot(fig[1,2], [1, 2], [0.5, 0.2], bar_labels = [lab1, lab1], flip_labels_at = 0.3)
+	barplot(fig[2,1], [1, 2], [0.5, 0.2], bar_labels = [lab2, lab2], flip_labels_at = 0.3, direction=:x)
+	barplot(fig[2,2], [1, 2], [0.5, 0.2], bar_labels = [lab2, lab2], flip_labels_at = 0.3)
+
+	text(fig[1,3], [1, 2], [1, 2]; text = [lab2, "a"], align = [(0, 0), (0.5, 0.5)], textsize = 25)
+	fig
+	#save("/tmp/fig.png", fig); run(`open /tmp/fig.png`)
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1229,9 +1452,9 @@ version = "0.21.0+0"
 
 [[deps.Glib_jll]]
 deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE2_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "fb83fbe02fe57f2c068013aa94bcdf6760d3a7a7"
+git-tree-sha1 = "d3b3624125c1474292d0d8ed0f65554ac37ddb23"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
-version = "2.74.0+1"
+version = "2.74.0+2"
 
 [[deps.GraphMakie]]
 deps = ["GeometryBasics", "Graphs", "LinearAlgebra", "Makie", "NetworkLayout", "StaticArrays"]
@@ -1483,9 +1706,9 @@ version = "1.42.0+0"
 
 [[deps.Libiconv_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "42b62845d70a619f063a7da093d995ec8e15e778"
+git-tree-sha1 = "c7cb1f5d892775ba13767a87c7ada0b980ea0a71"
 uuid = "94ce4f54-9a6c-5748-9c1c-f9c7231a4531"
-version = "1.16.1+1"
+version = "1.16.1+2"
 
 [[deps.Libmount_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2279,6 +2502,7 @@ version = "3.5.0+0"
 # ╠═8028be99-7559-4974-91a6-36ccab2d4a7f
 # ╠═af1b2d6d-0ac8-4bbf-b0da-adf65f27330e
 # ╠═8d9c009d-7434-4d8b-884f-2725639b2748
+# ╠═ac36c36f-1ecc-4e3c-b421-1e414dba0fdd
 # ╟─ed67cfcb-b83d-4b8b-b698-00e91056523a
 # ╠═6e9977c1-b74e-4092-a858-1c1516bd3fe5
 # ╠═4ef94a94-e170-4591-81fc-33f50a605367
@@ -2298,5 +2522,11 @@ version = "3.5.0+0"
 # ╟─a15f8d3c-2bb2-40d0-9439-701fbd8dd47c
 # ╠═57945142-4153-4c89-bef6-bb8bb0b6a7d8
 # ╠═5e26f5e4-0af9-4c2c-bba7-cfa53547e5e9
+# ╟─1c225b52-55d9-44f9-947c-b16ce9bf481f
+# ╠═4bcf6d95-0fd1-4d60-9600-54ee8015e21f
+# ╠═2b8766af-b3b8-4e3a-9751-96e68c321acc
+# ╠═b4ac5a2e-ed01-4bed-9183-dec5fe614990
+# ╠═7c14ee7d-4f10-45cd-ab67-aff9ce724402
+# ╠═109dbddf-7ee9-461e-b134-09ab3c0790f3
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
