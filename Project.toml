@@ -1,7 +1,7 @@
 name = "FinancialNetworks"
 uuid = "c73f5c1d-977f-41e1-b4fe-bd0ab588d05d"
 authors = ["Fabian Greimel <fabgrei@gmail.com>"]
-version = "0.2.2"
+version = "0.2.3"
 
 [deps]
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"

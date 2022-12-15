@@ -866,8 +866,7 @@ function balance_sheet_df_new(bank, firm, (; x, y); ωᵢ=1.0, ε=0.0, ℓ̄₋�
 end
 
 # ╔═╡ 05688f6e-afa8-407b-867b-884a753c4ea9
-#=╠═╡
-function _visualize_simple_balance_sheet_(bank, firm, (; x, y))
+function _visualize_simple_balance_sheet_(bank, firm, (; x, y); show_illiquid=true)
 
 	(; df, bs_max, ℓ, shortfall) = balance_sheet_df_new(bank, firm, (; x, y))
 
@@ -897,10 +896,8 @@ function _visualize_simple_balance_sheet_(bank, firm, (; x, y))
 
 	(; plt, bs_max)
 end
-  ╠═╡ =#
 
 # ╔═╡ 4ef94a94-e170-4591-81fc-33f50a605367
-#=╠═╡
 function visualize_simple_balance_sheet(args...; figure=(;), legend=(;), kwargs...)
 	(; plt, bs_max) = _visualize_simple_balance_sheet_(args...; kwargs...)
 
@@ -916,7 +913,6 @@ function visualize_simple_balance_sheet(args...; figure=(;), legend=(;), kwargs.
 		legend,
 	)
 end
-  ╠═╡ =#
 
 # ╔═╡ 6e9977c1-b74e-4092-a858-1c1516bd3fe5
 #=╠═╡
@@ -932,13 +928,12 @@ let
 	figure = (; fonts, resolution = (400, 350), fontsize=15)
 
 	firm = (; a, A, ζ, α=0.0, ζ_α = 1.0)
-	visualize_simple_balance_sheet((; c, ν, ε=ε_cash), firm, (; x, y); figure) |> as_svg
+	visualize_simple_balance_sheet((; c, ν, ε=ε_cash), firm, (; x, y); figure, show_illiquid) |> as_svg
 	
 end
   ╠═╡ =#
 
 # ╔═╡ 21985363-5538-41b5-b2df-5cc3131040c3
-#=╠═╡
 function visualize_simple_balance_sheet!(figpos, legpos, args...; legend=(;), kwargs...)
 	(; plt, bs_max) = _visualize_simple_balance_sheet_(args...; kwargs...)
 
@@ -950,7 +945,6 @@ function visualize_simple_balance_sheet!(figpos, legpos, args...; legend=(;), kw
 	
 	legend!(legpos, fg; legend...)
 end
-  ╠═╡ =#
 
 # ╔═╡ ca99d6ff-1ab1-4de1-9009-2ebdbb49140e
 function balance_sheet_df((; ν, c), (; a, A, ζ), (; ℓᵢ, ωᵢ, y_pc, ν_pc, x̄, ȳ, div, rec_field, rec_machines))
