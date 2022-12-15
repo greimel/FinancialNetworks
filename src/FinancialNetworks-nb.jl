@@ -665,7 +665,6 @@ end;
 #=╠═╡
 RES = let
 	shocked_bank = 2
-	show_firms = true
 	common_lenders = true
 	
 	if !common_lenders #AOTS
@@ -689,7 +688,7 @@ RES = let
 	
 	(; bank_df, firm_df) = equilibrium(banks, IMx, firms, shares, εs)
 
-	(; bank_df, firm_df, IM=IMx, show_firms, shares, firms, banks)
+	(; bank_df, firm_df, IM=IMx, shares, firms, banks)
 end
   ╠═╡ =#
 
@@ -699,15 +698,20 @@ RES.firm_df
   ╠═╡ =#
 
 # ╔═╡ 8028be99-7559-4974-91a6-36ccab2d4a7f
-function visualize_bank_firm_network!(ax, IM, shares, bank_df, firm_df; r = 1.4, start = Makie.automatic, layout=Makie.automatic, kwargs...)
+function visualize_bank_firm_network!(ax, IM, shares, bank_df, firm_df; r = 1.4, start = Makie.automatic, layout=Makie.automatic, show_firms=true, kwargs...)
 
 	n = IM.network
 	g₀ = SimpleWeightedDiGraph(n.Y)
 	A = adjacency_matrix(g₀)
 
-	big_A = [A       shares';
-	         0 * shares 0 * I] 	
+	if show_firms
+		big_A = [A       shares';
+	    	     0 * shares 0 * I]	
 
+	else
+		big_A = A
+	end
+	
 	g = big_A |> SimpleWeightedDiGraph
 
 	n_banks = size(A, 1)
@@ -729,14 +733,28 @@ function visualize_bank_firm_network!(ax, IM, shares, bank_df, firm_df; r = 1.4,
 	arrow_attr = (; markersize = edge_attr_df.arrow_size)
 	edge_attr = (; edge_attr_df.linewidth, edge_attr_df.linestyle)
 
+	node_color = ifelse.(bank_df.y_pc .< 1.0, :red, ifelse.(bank_df.ℓ .> 0.0, :orange, :lightgray))
+	nlabels = string.(1:n_banks)
+	node_marker = fill(:circle, n_banks)
+	
+	if show_firms
+		nlabels = [nlabels; ["F$i" for i ∈ 1:n_firms]]
+		node_marker = [node_marker; fill(:rect, n_firms)]
+		
+		node_color = [
+			node_color;
+			[mix_with_white(colorant"limegreen", 1-α) for α ∈ firm_df.δ_pc]
+		]
+	end
+	
 	start = start === Makie.automatic ? 1/n_banks : start
 	layout = layout === Makie.automatic ? nested_circles(n_banks; start, r) : layout
 	numbered_graphplot!(ax, g;
 		layout,
 		#figure = figure(220),
-		nlabels = [string.(1:n_banks); ["F$i" for i ∈ 1:n_firms]],
-		node_marker = [fill(:circle, n_banks); fill(:rect, n_firms)],
-		node_color = [ifelse.(bank_df.y_pc .< 1.0, :red, ifelse.(bank_df.ℓ .> 0.0, :orange, :lightgray)); [mix_with_white(colorant"limegreen", 1-α) for α ∈ firm_df.δ_pc]],
+		nlabels,
+		node_marker,
+		node_color,
 		edge_attr,
 		arrow_attr,
 		extend_limits = 0.1,
@@ -775,16 +793,17 @@ end
 # ╔═╡ 517b4257-4097-4ab4-8ddb-34e877f6ad15
 #=╠═╡
 let
-	(; IM, shares, bank_df, firm_df, show_firms) = RES
+	(; IM, shares, bank_df, firm_df) = RES
+	show_firms = true
 	
 	if show_firms
 		kws = (;)
 	else
-		kws = (; layout = componentwise_circle)
-		shares = fill(0.0, (0, size(shares, 2)))
+		kws = (;)
+		#kws = (; layout = componentwise_circle)
 	end
 
-	visualize_bank_firm_network(IM, shares, bank_df, firm_df; add_legend=true, kws...) |> as_svg
+	visualize_bank_firm_network(IM, shares, bank_df, firm_df; add_legend=true, show_firms, kws...) |> as_svg
 
 end
   ╠═╡ =#
@@ -1007,7 +1026,7 @@ let
 
 	fig = Figure(; resolution = (800, 300), fonts)
 		
-	visualize_bank_firm_network!(Axis(fig[1,1][2,1]), IM, shares, bank_df, firm_df; start = 1/n_banks)
+	visualize_bank_firm_network!(Axis(fig[1,1][2,1]), IM, shares, bank_df, firm_df; start = 1/n_banks, show_firms=true)
 
 	add_legend!(fig[1,1][1,1], orientation=:horizontal, framevisible=false, nbanks=2)
 
@@ -2544,7 +2563,7 @@ version = "3.5.0+0"
 # ╟─6e9977c1-b74e-4092-a858-1c1516bd3fe5
 # ╟─1d73462f-7016-466c-97af-cb2cd2f8785f
 # ╟─51f5c242-54af-4511-9838-58326756197d
-# ╟─517b4257-4097-4ab4-8ddb-34e877f6ad15
+# ╠═517b4257-4097-4ab4-8ddb-34e877f6ad15
 # ╟─7e46af06-58f4-44d3-98c0-f9b41f4d8d84
 # ╠═0a2dfc44-67f8-4e9f-991f-906509116d66
 # ╠═eabcafbd-5c35-4ee9-a50c-d129f8d3a34a
